@@ -1,0 +1,7 @@
+saltapiurl: 'http://localhost:8000/'  
+saltuser: 'xmppuser'                  
+saltpass: '73Hengebruer'         
+xmppadminuser: 'admin@salt.demo.no' 
+stripdomain: '.demo.no'             
+username: 'salt@salt.demo.no'       
+password: '66Kjensleuttrykket'      
