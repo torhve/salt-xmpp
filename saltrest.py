@@ -39,7 +39,6 @@ class SaltREST(object):
         req = urllib2.Request(self.config['saltapiurl']+'login', postdata, HEADERS)
         f = urllib2.urlopen(req)
         return f.read()
-        #print "Salt says: %s" % f.read()
 
     def get_minions(self):
 
@@ -53,6 +52,8 @@ class SaltREST(object):
         req = urllib2.Request(self.config['saltapiurl']+'', postdata, HEADERS)
         f = urllib2.urlopen(req)
         ret = json.loads(f.read())
+        # Format minions as a list with minion FQDNs
+        ret = [x.replace(self.config['stripdomain'], '') for x in ret['return'][0].keys()]
         return ret
 
     def call(self, lowstate):
