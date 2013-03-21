@@ -2,72 +2,14 @@ import sys
 import os
 import xmpp
 
-import json
-import urllib
-import urllib2
-from cookielib import CookieJar
 import yaml
+import saltrest
 
-cj = CookieJar()
 root = os.path.dirname(os.path.abspath(__file__))
 
-HEADERS = {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest',
-}
 CONFIG = yaml.safe_load(file(root+'/config.yaml').read())
-TOKEN = None
 
-class MyHTTPRedirectHandler(urllib2.HTTPRedirectHandler):
-    def http_error_302(self, req, fp, code, msg, headers):
-        TOKEN = headers['X-Auth-Token']
-        HEADERS['X-Auth-Token'] = TOKEN
-        return urllib2.HTTPRedirectHandler.http_error_302(self, req, fp, code, msg, headers)
-
-    http_error_301 = http_error_303 = http_error_307 = http_error_302
-
-cookieprocessor = urllib2.HTTPCookieProcessor(cj)
-
-opener = urllib2.build_opener(MyHTTPRedirectHandler, cookieprocessor)
-urllib2.install_opener(opener)
-
-MINIONS = []
-
-def get_minions():
-
-    lowstate = [{
-        'client': 'local',
-        'tgt': '*',
-        'fun': 'test.version',
-    }]
-
-    lowstate_login =[{
-        'eauth': 'pam',
-        'username': CONFIG['saltuser'],
-        'password': CONFIG['saltpass'],
-    }]
-
-    postdata = json.dumps(lowstate_login).encode()
-
-    req = urllib2.Request(CONFIG['saltapiurl']+'login', postdata, HEADERS)
-    f = urllib2.urlopen(req)
-    #print "Salt says: %s" % f.read()
-
-    postdata = json.dumps(lowstate).encode()
-    req = urllib2.Request(CONFIG['saltapiurl']+'', postdata, HEADERS)
-    f = urllib2.urlopen(req)
-    ret = json.loads(f.read())
-    return ret
-
-def salt_req(lowstate):
-    postdata = json.dumps(lowstate).encode()
-    req = urllib2.Request(CONFIG['saltapiurl'], postdata, HEADERS)
-    f = urllib2.urlopen(req)
-    ret = json.loads(f.read())
-    return ret
-
-class Bot:
+class Bot(object):
 
     def __init__(self,jabber,remotejid):
         self.jabber = jabber
@@ -123,7 +65,7 @@ def messageCB(conn, mess):
                 'tgt': '*',
                 'fun': text,
             }]
-            ret = xmpp_outputter(salt_req(lowstate))
+            ret = xmpp_outputter(salt.call(lowstate))
             conn.send(xmpp.Message(mess.getFrom(), ret) )
         
 def startbot(username, password):
@@ -172,9 +114,9 @@ def StepOn(conn):
 def GoOn(conn):
     while StepOn(conn): pass
 
-if __name__ == '__main__':
-    MINIONS = get_minions()
-    username = CONFIG['username']
-    password = CONFIG['password']
-    startbot(username, password)
+salt = saltrest.SaltREST(CONFIG)
+MINIONS = salt.get_minions()
+username = CONFIG['username']
+password = CONFIG['password']
+startbot(username, password)
 
